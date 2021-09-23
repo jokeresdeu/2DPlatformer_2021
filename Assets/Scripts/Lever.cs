@@ -4,6 +4,7 @@ using UnityEngine;
 public class Lever : MonoBehaviour
 {
     [SerializeField] private Sprite _activeSprite;
+    [SerializeField] private Chest _chest;
 
     private SpriteRenderer _spriteRenderer;
 
@@ -15,6 +16,7 @@ public class Lever : MonoBehaviour
     {
         _spriteRenderer = GetComponent<SpriteRenderer>();
         _inactiveSprite = _spriteRenderer.sprite;
+        _chest.Activated = true;
     }
 
     private void OnTriggerEnter2D(Collider2D other)

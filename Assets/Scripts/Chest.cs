@@ -13,7 +13,7 @@ public class Chest : MonoBehaviour
         PlayerMover player = other.GetComponent<PlayerMover>();
         if (player != null)
         {
-           
+            player.CoinsAmount += +_coinsAmount;
         }
     }
 }

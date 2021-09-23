@@ -1,6 +1,11 @@
 using System;
+using DefaultNamespace;
+using TMPro;
+using UnityEditor.Experimental.GraphView;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.Serialization;
+using UnityEngine.UI;
 
 [RequireComponent(typeof(Rigidbody2D))]
 public class PlayerMover : MonoBehaviour
@@ -16,9 +21,11 @@ public class PlayerMover : MonoBehaviour
     [SerializeField] private float _groundCheckerRadius;
     [SerializeField] private LayerMask _whatIsGround;
     [SerializeField] private LayerMask _whatIsCell;
+    [SerializeField] private LayerMask _whatIsPlatform;
     [SerializeField] private Collider2D _headCollider;
     [SerializeField] private float _headCheckerRadius;
     [SerializeField] private Transform _headChecker;
+    [SerializeField] private int _maxHp;
 
     [Header(("Animation"))] 
     [SerializeField] private Animator _animator;
@@ -27,16 +34,46 @@ public class PlayerMover : MonoBehaviour
     [SerializeField] private string _jumpAnimatorKey;
     [SerializeField] private string _crouchAnimatorKey;
 
+    [Header("UI")] 
+    [SerializeField] private TMP_Text _coinsAmountText;
+
+    [SerializeField] private Slider _hpBar;
+    
     private float _horizontalDirection;
     private float _verticalDirection;
     private bool _jump;
     private bool _crawl;
-
+    private int _coinsAmount;
+    private int _currentHp;
     public bool CanClimb { private get; set; }
+    
+    public int CoinsAmount
+    {
+        get => _coinsAmount;
+        set
+        {
+            _coinsAmount = value;
+            _coinsAmountText.text = value.ToString();
+        }
+    }
+
+    private int CurrentHp
+    {
+        get => _currentHp;
+        set
+        {
+            _currentHp = value;
+            _hpBar.value = _currentHp;
+        }
+    }
     
     // Start is called before the first frame update
     private void Start()
     {
+        Vector2 vector = new Vector2(10,11);
+        _hpBar.maxValue = _maxHp;
+        CurrentHp = _maxHp;
+        CoinsAmount = 0;
         _rigidbody = GetComponent<Rigidbody2D>();
     }
 
@@ -45,7 +82,6 @@ public class PlayerMover : MonoBehaviour
     {
         _horizontalDirection = Input.GetAxisRaw("Horizontal"); //-1(A, <-) 1(D,->) //gamepad (<-\->)
         _verticalDirection = Input.GetAxisRaw("Vertical");
-
         _animator.SetFloat(_runAnimatorKey, Mathf.Abs(_horizontalDirection));
         if (Input.GetKeyDown(KeyCode.Space))
         {
@@ -80,7 +116,7 @@ public class PlayerMover : MonoBehaviour
 
         bool canJump = Physics2D.OverlapCircle(_groundChecker.position, _groundCheckerRadius, _whatIsGround);
         bool canStand = !Physics2D.OverlapCircle(_headChecker.position, _headCheckerRadius, _whatIsCell); 
-        
+        Collider2D coll = Physics2D.OverlapCircle(_headChecker.position, _headCheckerRadius, _whatIsCell);
         _headCollider.enabled = !_crawl && canStand;
        
         if(_jump && canJump)
@@ -103,6 +139,23 @@ public class PlayerMover : MonoBehaviour
 
     public void AddHp(int hpPoints)
     {
-        Debug.Log("Hp raised " + hpPoints);
+        CurrentHp += hpPoints;
+        if (CurrentHp > _maxHp)
+            CurrentHp = _maxHp;
+    }
+
+    public void TakeDamage(int damage)
+    {
+        CurrentHp -= damage;
+        if (CurrentHp <= 0)
+        {
+            gameObject.SetActive(false);
+            Invoke(nameof(ReloadScene), 1f);
+        }
+    }
+
+    private void ReloadScene()
+    {
+        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
     }
 }
