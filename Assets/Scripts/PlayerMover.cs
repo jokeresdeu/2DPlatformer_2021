@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using DefaultNamespace;
 using TMPro;
 using UnityEditor.Experimental.GraphView;
@@ -139,9 +140,19 @@ public class PlayerMover : MonoBehaviour
 
     public void AddHp(int hpPoints)
     {
-        CurrentHp += hpPoints;
-        if (CurrentHp > _maxHp)
-            CurrentHp = _maxHp;
+        int missingHp = _maxHp - CurrentHp;
+        int pointToAdd = missingHp > hpPoints ? hpPoints : missingHp;
+        StartCoroutine(RestoreHp(pointToAdd));
+    }
+
+    private IEnumerator RestoreHp(int pointToAdd)
+    {
+        while (pointToAdd != 0)
+        {
+            pointToAdd--;
+            CurrentHp++;
+            yield return new WaitForSeconds(0.2f);
+        }
     }
 
     public void TakeDamage(int damage)
