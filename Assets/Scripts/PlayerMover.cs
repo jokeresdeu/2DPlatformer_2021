@@ -34,6 +34,7 @@ public class PlayerMover : MonoBehaviour
     [SerializeField] private string _runAnimatorKey;
     [SerializeField] private string _jumpAnimatorKey;
     [SerializeField] private string _crouchAnimatorKey;
+    [SerializeField] private string _hurtAnimationKey;
 
     [Header("UI")] 
     [SerializeField] private TMP_Text _coinsAmountText;
@@ -46,6 +47,7 @@ public class PlayerMover : MonoBehaviour
     private bool _crawl;
     private int _coinsAmount;
     private int _currentHp;
+    private float _lastHurtTime;
     public bool CanClimb { private get; set; }
     
     public int CoinsAmount
@@ -81,6 +83,11 @@ public class PlayerMover : MonoBehaviour
     // Update is called once per frame
     private void Update()
     {
+        if (_animator.GetBool(_hurtAnimationKey))
+        {
+            return;
+        }
+        
         _horizontalDirection = Input.GetAxisRaw("Horizontal"); //-1(A, <-) 1(D,->) //gamepad (<-\->)
         _verticalDirection = Input.GetAxisRaw("Vertical");
         _animator.SetFloat(_runAnimatorKey, Mathf.Abs(_horizontalDirection));
@@ -102,7 +109,17 @@ public class PlayerMover : MonoBehaviour
     }
 
     private void FixedUpdate()
-    { 
+    {
+        bool canJump = Physics2D.OverlapCircle(_groundChecker.position, _groundCheckerRadius, _whatIsGround);
+
+        if (_animator.GetBool(_hurtAnimationKey))
+        {
+            if (canJump && Time.time - _lastHurtTime > 0.2f)
+            {
+                _animator.SetBool(_hurtAnimationKey, false);
+            }
+            return;
+        }
         _rigidbody.velocity = new Vector2(_horizontalDirection * _speed, _rigidbody.velocity.y);
 
         if (CanClimb)
@@ -115,8 +132,7 @@ public class PlayerMover : MonoBehaviour
             _rigidbody.gravityScale = 1;
         }
 
-        bool canJump = Physics2D.OverlapCircle(_groundChecker.position, _groundCheckerRadius, _whatIsGround);
-        bool canStand = !Physics2D.OverlapCircle(_headChecker.position, _headCheckerRadius, _whatIsCell); 
+      bool canStand = !Physics2D.OverlapCircle(_headChecker.position, _headCheckerRadius, _whatIsCell); 
         Collider2D coll = Physics2D.OverlapCircle(_headChecker.position, _headCheckerRadius, _whatIsCell);
         _headCollider.enabled = !_crawl && canStand;
        
@@ -155,13 +171,26 @@ public class PlayerMover : MonoBehaviour
         }
     }
 
-    public void TakeDamage(int damage)
+    public void TakeDamage(int damage, float pushPower = 0, float posX = 0)
     {
+        if (_animator.GetBool(_hurtAnimationKey))
+        {
+            return;
+        }
+        
         CurrentHp -= damage;
         if (CurrentHp <= 0)
         {
             gameObject.SetActive(false);
             Invoke(nameof(ReloadScene), 1f);
+        }
+
+        if (pushPower != 0 && Time.time - _lastHurtTime > 0.5f)
+        {
+            _lastHurtTime = Time.time;
+            int direction = posX > transform.position.x ? -1 : 1;
+            _rigidbody.AddForce(new Vector2(direction * pushPower/4, pushPower));
+            _animator.SetBool(_hurtAnimationKey, true);
         }
     }
 

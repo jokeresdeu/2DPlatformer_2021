@@ -43,7 +43,6 @@ GameObject:
   - component: {fileID: 3057144271935868742}
   - component: {fileID: 3057144271935868743}
   - component: {fileID: 3057144271935868740}
-  - component: {fileID: 23548032}
   m_Layer: 0
   m_Name: Ranged_Enemy
   m_TagString: Untagged
@@ -173,25 +172,3 @@ Rigidbody2D:
   m_SleepingMode: 1
   m_CollisionDetection: 0
   m_Constraints: 4
---- !u!114 &23548032
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3057144271935868746}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 30a66a51da9416a4189faeab95f61130, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _attackRange: 35.09
-  _whatIsPlayer:
-    serializedVersion: 2
-    m_Bits: 128
-  _muzzle: {fileID: 3057144271930682030}
-  _bullet: {fileID: 5569398595564427744, guid: 2fafc728eedeaf6499ad81e5c10a9e20, type: 3}
-  _projectileSpeed: 10
-  _faceRight: 1
-  _animator: {fileID: 3057144271935868742}
-  _shootAnimationKey: Shoot
