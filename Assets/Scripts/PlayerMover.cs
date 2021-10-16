@@ -35,11 +35,25 @@ public class PlayerMover : MonoBehaviour
     [SerializeField] private string _jumpAnimatorKey;
     [SerializeField] private string _crouchAnimatorKey;
     [SerializeField] private string _hurtAnimationKey;
+    [SerializeField] private string _attackAnimatorKey;
+    [SerializeField] private string _castAnimatorKey;
 
     [Header("UI")] 
     [SerializeField] private TMP_Text _coinsAmountText;
 
     [SerializeField] private Slider _hpBar;
+
+    [Header("Attack")] 
+    [SerializeField] private int _swordDamage;
+    [SerializeField] private Transform _swordAttackPoint;
+    [SerializeField] private float _swordAttackRadius;
+    [SerializeField] private LayerMask _whatIsEnemy;
+    [SerializeField] private int _skillDamage;
+    [SerializeField] private Transform _skillCastPoint;
+    [SerializeField] private float _skillLength;
+    [SerializeField] private LineRenderer _castLine;
+
+    [SerializeField]private bool _faceRight;
     
     private float _horizontalDirection;
     private float _verticalDirection;
@@ -48,6 +62,8 @@ public class PlayerMover : MonoBehaviour
     private int _coinsAmount;
     private int _currentHp;
     private float _lastHurtTime;
+    private bool _needToAttack;
+    private bool _needToCast;
     public bool CanClimb { private get; set; }
     
     public int CoinsAmount
@@ -87,8 +103,18 @@ public class PlayerMover : MonoBehaviour
         {
             return;
         }
+
+        if (Input.GetButtonDown("Fire1"))
+        {
+            _needToAttack = true;
+        }
+
+        if (Input.GetButtonDown("Fire2"))
+        {
+            _needToCast = true;
+        }
         
-        _horizontalDirection = Input.GetAxisRaw("Horizontal"); //-1(A, <-) 1(D,->) //gamepad (<-\->)
+        _horizontalDirection = Input.GetAxisRaw("Horizontal"); 
         _verticalDirection = Input.GetAxisRaw("Vertical");
         _animator.SetFloat(_runAnimatorKey, Mathf.Abs(_horizontalDirection));
         if (Input.GetKeyDown(KeyCode.Space))
@@ -96,16 +122,22 @@ public class PlayerMover : MonoBehaviour
             _jump = true;
         }
         
-        if (_horizontalDirection > 0 && _spriteRenderer.flipX) //bool - true/false
+        if (_horizontalDirection > 0 && !_faceRight) 
         {
-            _spriteRenderer.flipX = false;
+            Flip();
         }
-        else if(_horizontalDirection < 0 && !_spriteRenderer.flipX) //! - no 
+        else if(_horizontalDirection < 0 && _faceRight) 
         {
-            _spriteRenderer.flipX = true;
+           Flip();
         }
 
         _crawl = Input.GetKey(KeyCode.C);
+    }
+
+    private void Flip()
+    {
+        _faceRight = !_faceRight;
+        transform.Rotate(0, 180, 0);
     }
 
     private void FixedUpdate()
@@ -116,11 +148,15 @@ public class PlayerMover : MonoBehaviour
         {
             if (canJump && Time.time - _lastHurtTime > 0.2f)
             {
+                
                 _animator.SetBool(_hurtAnimationKey, false);
             }
+
+            _needToAttack = false;
+            _needToCast = false;
             return;
         }
-        _rigidbody.velocity = new Vector2(_horizontalDirection * _speed, _rigidbody.velocity.y);
+        
 
         if (CanClimb)
         {
@@ -132,7 +168,7 @@ public class PlayerMover : MonoBehaviour
             _rigidbody.gravityScale = 1;
         }
 
-      bool canStand = !Physics2D.OverlapCircle(_headChecker.position, _headCheckerRadius, _whatIsCell); 
+        bool canStand = !Physics2D.OverlapCircle(_headChecker.position, _headCheckerRadius, _whatIsCell); 
         Collider2D coll = Physics2D.OverlapCircle(_headChecker.position, _headCheckerRadius, _whatIsCell);
         _headCollider.enabled = !_crawl && canStand;
        
@@ -145,6 +181,27 @@ public class PlayerMover : MonoBehaviour
         
         _animator.SetBool(_jumpAnimatorKey, !canJump);
         _animator.SetBool(_crouchAnimatorKey, !_headCollider.enabled);
+
+        if (!_headCollider.enabled)
+        {
+            _needToAttack = false;
+            _needToCast = false;
+            return;
+        }
+        
+        if (_needToAttack)
+        {
+            StartAttack();
+            _horizontalDirection = 0;
+        }
+
+        if (_needToCast)
+        {
+            StartCast();
+            _horizontalDirection = 0;
+        }
+        
+        _rigidbody.velocity = new Vector2(_horizontalDirection * _speed, _rigidbody.velocity.y);
     }
 
     private void OnDrawGizmos()
@@ -152,6 +209,70 @@ public class PlayerMover : MonoBehaviour
         Gizmos.DrawWireSphere(_groundChecker.position, _groundCheckerRadius);
         Gizmos.color = Color.green;
         Gizmos.DrawWireSphere(_headChecker.position, _headCheckerRadius);
+        Gizmos.color = Color.red;
+        Gizmos.DrawWireCube(_swordAttackPoint.position, new Vector3(_swordAttackRadius, _swordAttackRadius, 0));
+    }
+
+    private void StartAttack()
+    {
+        if (_animator.GetBool(_attackAnimatorKey))
+        {
+            return;
+        }
+        
+        _animator.SetBool(_attackAnimatorKey, true);
+    }
+
+    private void Attack()
+    {
+        Collider2D[] targets = Physics2D.OverlapBoxAll(_swordAttackPoint.position,
+            new Vector2(_swordAttackRadius, _swordAttackRadius), _whatIsEnemy);
+
+        foreach (var target in targets)
+        {
+            RangedEnemy rangedEnemy = target.GetComponent<RangedEnemy>();
+            if (rangedEnemy != null)
+            {
+                rangedEnemy.TakeDamage(_swordDamage);
+            }
+        }
+        _animator.SetBool(_attackAnimatorKey, false);
+        _needToAttack = false;
+    }
+
+    private void StartCast()
+    {
+        if (_animator.GetBool(_castAnimatorKey))
+        {
+            return;
+        }
+        
+        _animator.SetBool(_castAnimatorKey, true);
+    }
+
+    private void Cast()
+    {
+        RaycastHit2D[] hits =
+            Physics2D.RaycastAll(_skillCastPoint.position, transform.right, _skillLength, _whatIsEnemy);
+        foreach (var hit in hits)
+        {
+            RangedEnemy target = hit.collider.GetComponent<RangedEnemy>();
+            if (target != null)
+            {
+                target.TakeDamage(_skillDamage);
+            }
+        }
+        _animator.SetBool(_castAnimatorKey, false);
+        _castLine.SetPosition(0, _skillCastPoint.position);
+        _castLine.SetPosition(1, _skillCastPoint.position + transform.right * _skillLength);
+        _castLine.enabled = true;
+        _needToCast = false;
+        Invoke(nameof(DisableLine), 0.1f);
+    }
+
+    private void DisableLine()
+    {
+        _castLine.enabled = false;
     }
 
     public void AddHp(int hpPoints)
@@ -198,4 +319,6 @@ public class PlayerMover : MonoBehaviour
     {
         SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
     }
+    
+    
 }

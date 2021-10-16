@@ -13,6 +13,7 @@ public class RangedEnemy : MonoBehaviour
     [SerializeField] private bool _faceRight;
     [SerializeField] private Slider _hpBar;
     [SerializeField] private int _maxHp;
+    [SerializeField] private GameObject _enemySystem;
     private int _currentHp;
 
     private bool _canShoot;
@@ -31,6 +32,10 @@ public class RangedEnemy : MonoBehaviour
     private void ChangeHp(int hp)
     {
         _currentHp = hp;
+        if (_currentHp <= 0)
+        {
+            Destroy(_enemySystem);
+        }
         _hpBar.value = hp;
     }
 
@@ -74,5 +79,10 @@ public class RangedEnemy : MonoBehaviour
         bullet.StartFly(transform.right);
         _animator.SetBool(_shootAnimatorKey, false);
         Invoke(nameof(CheckIfCanShoot), 1f);
+    }
+
+    public void TakeDamage(int damage)
+    {
+        ChangeHp(_currentHp - damage);
     }
 }
